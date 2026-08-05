@@ -38,9 +38,9 @@ These apply to every part, not just the ones that name them.
 - [x] Enrich this document with substeps, tests and success criteria per part
 - [x] Write `frontend/AGENTS.md` describing the existing frontend code (`frontend/CLAUDE.md` imports it)
 - [x] Record the decisions above
-- [ ] **Gate: user reviews and approves this plan before Part 2 begins**
+- [x] **Gate: user reviews and approves this plan before Part 2 begins** — approved
 
-**Success criteria:** the user has explicitly approved the plan.
+**Success criteria:** the user has explicitly approved the plan. Met.
 
 ---
 
@@ -48,19 +48,25 @@ These apply to every part, not just the ones that name them.
 
 **Goal:** a Docker container that starts, serves a static hello-world page at `/`, and answers an API call. No Kanban yet.
 
-- [ ] `backend/` — FastAPI app with `uv` (`pyproject.toml`, `uv.lock`), `main.py`
-- [ ] `GET /api/health` returning `{"status": "ok"}`
-- [ ] Static mount at `/` serving a placeholder `index.html` that fetches `/api/health` and displays the result
-- [ ] `Dockerfile` — Python stage on `uv`, non-root user, `EXPOSE 8000`
-- [ ] `.dockerignore` (exclude `node_modules`, `.next`, `.git`, `.env`)
-- [ ] Named volume for the SQLite file so data survives `docker rm`
-- [ ] `.env` passed with `--env-file`, never baked into the image
-- [ ] `scripts/start.sh`, `scripts/stop.sh` (Mac/Linux) and `scripts/start.ps1`, `scripts/stop.ps1` (Windows) — build if needed, run, report the URL, stop and remove cleanly
-- [ ] `pytest` + `pytest-cov` wired up, coverage gate at 80%
+- [x] `backend/` — FastAPI app with `uv` (`pyproject.toml`, `uv.lock`), `app/main.py`
+- [x] `GET /api/health` returning `{"status": "ok"}`
+- [x] Static mount at `/` serving a placeholder `index.html` that fetches `/api/health` and displays the result
+- [x] `Dockerfile` — `uv` on Python 3.14, non-root `app` user, `EXPOSE 8000`
+- [x] `.dockerignore` (excludes `node_modules`, `.next`, `.git`, `.env`)
+- [x] Named volume `kanban-data` mounted at `/data` so the SQLite file survives `docker rm`
+- [x] `.env` passed with `--env-file`, never baked into the image
+- [x] `scripts/start.sh`, `scripts/stop.sh` (Mac/Linux) and `scripts/start.ps1`, `scripts/stop.ps1` (Windows) — build, run, report the URL, stop and remove cleanly
+- [x] `pytest` + `pytest-cov` wired up, coverage gate at 80%
 
-**Tests:** backend unit test for `/api/health`; start script brings the container up and `curl localhost:8000/api/health` succeeds; stop script leaves no running container.
+**Running the backend tests:** the host has no `uv`, and `uv` is a container-side tool by decision, so tests run in a dedicated image stage:
 
-**Success criteria:** on a clean machine, `scripts/start.sh` produces a working page at `http://localhost:8000` showing the health-check result. `pytest` passes at >=80% coverage.
+```
+docker build --target test -t kanban-test . && docker run --rm kanban-test
+```
+
+**Tests:** backend unit tests for `/api/health` and for `/` serving the static page; start script brings the container up and `curl localhost:8000/api/health` succeeds; stop script leaves no container and correctly reports the not-running case.
+
+**Success criteria:** on a clean machine, `scripts/start.sh` produces a working page at `http://localhost:8000` showing the health-check result. `pytest` passes at >=80% coverage. **Met** — 2 tests pass at 100% coverage; container runs as `app`; `OPENROUTER_API_KEY` reaches the container from `.env`.
 
 ---
 

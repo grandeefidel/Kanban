@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kanban</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font-family: system-ui, sans-serif;
+        color: #032147;
+      }
+      main {
+        text-align: center;
+      }
+      h1 {
+        margin: 0 0 0.25rem;
+        border-left: 4px solid #ecad0a;
+        padding-left: 0.75rem;
+      }
+      p {
+        color: #888888;
+        margin: 0 0 1.5rem;
+      }
+      #health {
+        font-weight: 600;
+        color: #209dd7;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Kanban</h1>
+      <p>Scaffolding placeholder. The board arrives in Part 3.</p>
+      <div>API health: <span id="health">checking...</span></div>
+    </main>
+    <script>
+      fetch("/api/health")
+        .then((r) => r.json())
+        .then((d) => {
+          document.getElementById("health").textContent = d.status;
+        })
+        .catch(() => {
+          const el = document.getElementById("health");
+          el.textContent = "unreachable";
+          el.style.color = "#753991";
+        });
+    </script>
+  </body>
+</html>
