@@ -74,19 +74,22 @@ docker build --target test -t kanban-test . && docker run --rm kanban-test
 
 **Goal:** the existing demo Kanban board served from the container at `/`.
 
-- [ ] Set `output: "export"` in `next.config.ts`, plus `images.unoptimized` if needed
-- [ ] Confirm the board still works as a static export — `BoardApp` already uses `dynamic(..., { ssr: false })`
-- [ ] Add the Node build stage to the Dockerfile, copy `out/` into the Python stage
-- [ ] FastAPI serves `out/` at `/`, with API routes registered **before** the catch-all static mount
-- [ ] Add `@vitest/coverage-v8` and the 80% threshold to `vitest.config.ts`
-- [ ] Backfill unit tests to reach 80%: `lib/store.ts` (all four actions, `findColumnByCard`, index clamping), `Column` rename commit/revert/empty-title, `AddCardForm` submit/cancel/blank-title, `CardContent` render and delete
-- [ ] Point the Playwright `webServer` at the container or a preview server rather than `npm run dev`
+- [x] Set `output: "export"` in `next.config.ts` — no image config needed, the app does not use `next/image`
+- [x] Confirm the board still works as a static export — `BoardApp` already uses `dynamic(..., { ssr: false })`
+- [x] Add the Node build stage to the Dockerfile (`node:26-bookworm-slim`), copy `out/` into the Python stage
+- [x] FastAPI serves `out/` at `/`, with API routes registered **before** the catch-all static mount
+- [x] Add `@vitest/coverage-v8` and the 80% threshold to `vitest.config.ts` (lines, statements, functions, branches)
+- [x] Backfill unit tests to reach 80%: `CardContent`, `AddCardForm`, `Column`, `Card`, `Board`, `BoardApp`
+- [x] Extract the drag logic from `Board.tsx` into `lib/drag.ts` as pure functions, with tests
+- [x] Point the Playwright `webServer` at the container rather than `npm run dev`
 
 **Note:** `app/layout.tsx` uses `next/font/google`, which downloads fonts at build time. The Docker build stage needs network access, or the fonts must be self-hosted.
 
-**Tests:** unit suite >=80% lines; Playwright board spec passes against the containerised app — board renders 5 columns, a card drags between columns, a column renames, a card adds and deletes.
+**On the drag extraction:** `Board.tsx` held `containerIdOf`, `indexInColumn` and the drag handlers inline, which left it at 35% coverage — jsdom gives dnd-kit no bounding boxes, so drags cannot be simulated in unit tests. The logic was pure functions of `columns` already, so it moved to `lib/drag.ts` (`columnIdOf`, `indexInColumn`, `crossColumnMove`, `finalMove`). Board's handlers are now three lines each, the logic is unit-tested directly, and real dragging stays covered by Playwright.
 
-**Success criteria:** `scripts/start.sh` serves the working demo board at `http://localhost:8000`. Both test suites pass.
+**Tests:** unit suite >=80% on all four metrics; Playwright board spec passes against the containerised app — board renders 5 columns, a card drags between columns, a column renames, a card adds and deletes.
+
+**Success criteria:** `scripts/start.sh` serves the working demo board at `http://localhost:8000`. Both test suites pass. **Met** — frontend 55 tests, coverage 94.3% lines / 93.4% statements / 93.8% functions / 81.8% branches; backend 2 tests at 100%; 5 Playwright specs pass against the container.
 
 ---
 

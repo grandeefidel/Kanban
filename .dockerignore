@@ -7,6 +7,7 @@ scripts
 
 node_modules
 .next
+out
 .vercel
 playwright-report
 test-results

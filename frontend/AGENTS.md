@@ -6,16 +6,20 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # Frontend
 
-Next.js 16.2.11 / React 19.2.4 / Tailwind v4 / TypeScript. Currently a frontend-only Kanban demo with all state in memory — no backend, no persistence. Everything below describes the starting point, which later parts of `docs/PLAN.md` replace with API-backed state.
+Next.js 16.2.11 / React 19.2.4 / Tailwind v4 / TypeScript. Built as a **static export** (`output: "export"` in `next.config.ts`) into `out/`, which FastAPI serves. That rules out SSR, server components with dynamic data, route handlers, middleware, rewrites and `next/image` with the default loader — see `node_modules/next/dist/docs/01-app/02-guides/static-exports.md`.
+
+Board state is still all in memory with no persistence; later parts of `docs/PLAN.md` replace it with API-backed state.
 
 ## Layout
 
 ```
 app/          layout.tsx (Geist fonts, metadata), page.tsx (renders BoardApp), globals.css
 components/   Board, BoardApp, Column, Card, CardContent, AddCardForm
-lib/          types.ts, store.ts (zustand), seed.ts, store.test.ts
+lib/          types.ts, store.ts (zustand), drag.ts, seed.ts
 tests/        board.spec.ts (Playwright)
 ```
+
+Unit tests sit next to their subject as `*.test.ts(x)`.
 
 ## State
 
@@ -33,9 +37,9 @@ Actions: `renameColumn`, `addCard`, `deleteCard`, `moveCard`. **There is no card
 
 ## Components
 
-`BoardApp` loads `Board` via `next/dynamic` with `ssr: false`, because dnd-kit needs the DOM. `Board` owns the `DndContext` and the drag handlers; `Column` is a droppable, `Card` is a sortable, and `CardContent` is the presentational card shared between the list and the `DragOverlay`.
+`BoardApp` loads `Board` via `next/dynamic` with `ssr: false`, because dnd-kit needs the DOM. `Board` owns the `DndContext`; `Column` is a droppable, `Card` is a sortable, and `CardContent` is the presentational card shared between the list and the `DragOverlay`.
 
-Drag calls `moveCard` from both `onDragOver` (cross-column, so the card follows the cursor live) and `onDragEnd` (final placement). Keyboard drag works via `KeyboardSensor`.
+The drag *logic* is not in the component. `lib/drag.ts` holds it as pure functions of `columns`: `columnIdOf` (dnd-kit reports either a column or a card under the cursor), `indexInColumn`, and the two that decide a move — `crossColumnMove` for `onDragOver`, which fires only when the card crosses into another column so it follows the cursor live, and `finalMove` for `onDragEnd`, which also handles reordering within a column. Both return `Move | null`. Board's handlers are three lines each. Put new drag logic in `lib/drag.ts`, not in the component. Keyboard drag works via `KeyboardSensor`.
 
 Column rename is inline-edit on click: Enter or blur commits, Escape reverts, empty falls back to the old title.
 
@@ -53,7 +57,10 @@ Tailwind v4 (`@theme` in `globals.css`, no `tailwind.config.js`). Semantic colou
 ```
 npm run dev        npm run build       npm run lint
 npm test           vitest run (jsdom, setup in vitest.setup.ts)
-npm run test:e2e   playwright, boots its own dev server on :3000
+npm test -- --coverage    enforces the 80% gate
+npm run test:e2e   playwright against the container on :8000
 ```
 
-Vitest only collects `lib/**/*.test.{ts,tsx}` and `components/**/*.test.{ts,tsx}`. The project requires 80% unit coverage — see `docs/PLAN.md`.
+Vitest only collects `lib/**/*.test.{ts,tsx}` and `components/**/*.test.{ts,tsx}`. Coverage thresholds are 80% on lines, statements, functions and branches — a run below any of them fails.
+
+Playwright's `webServer` runs `scripts/start.sh`, so the specs exercise the static export exactly as FastAPI serves it. The container is left running afterwards; `scripts/stop.sh` removes it. `Board.tsx`'s drag handlers are deliberately covered here rather than in jsdom, where dnd-kit has no real bounding boxes.

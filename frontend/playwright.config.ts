@@ -7,7 +7,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: "list",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: "http://localhost:8000",
     trace: "on-first-retry",
   },
   projects: [
@@ -16,10 +16,13 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
+  // Tests run against the real container, so they exercise the static export
+  // as FastAPI actually serves it. start.sh is idempotent and leaves the
+  // container running; stop it with scripts/stop.sh.
   webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    command: "bash ../scripts/start.sh",
+    url: "http://localhost:8000/api/health",
+    reuseExistingServer: true,
+    timeout: 600_000,
   },
 });

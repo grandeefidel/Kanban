@@ -14,7 +14,8 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { useBoardStore, findColumnByCard } from "@/lib/store";
+import { useBoardStore } from "@/lib/store";
+import { crossColumnMove, finalMove } from "@/lib/drag";
 import { Column } from "./Column";
 import { CardContent } from "./CardContent";
 
@@ -33,46 +34,19 @@ export function Board() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  function containerIdOf(id: string): string | undefined {
-    if (columns.some((c) => c.id === id)) return id;
-    return findColumnByCard(columns, id)?.id;
-  }
-
-  function indexInColumn(columnId: string, overId: string): number {
-    const column = columns.find((c) => c.id === columnId);
-    if (!column) return 0;
-    if (overId === columnId) return column.cardIds.length;
-    const idx = column.cardIds.indexOf(overId);
-    return idx === -1 ? column.cardIds.length : idx;
-  }
-
   function handleDragStart(event: DragStartEvent) {
     setActiveId(String(event.active.id));
   }
 
-  function handleDragOver(event: DragOverEvent) {
-    const { active, over } = event;
-    if (!over) return;
-    const activeId = String(active.id);
-    const overId = String(over.id);
-
-    const from = containerIdOf(activeId);
-    const to = containerIdOf(overId);
-    if (!from || !to || from === to) return;
-
-    moveCard(activeId, to, indexInColumn(to, overId));
+  function handleDragOver({ active, over }: DragOverEvent) {
+    const move = crossColumnMove(columns, String(active.id), over ? String(over.id) : null);
+    if (move) moveCard(String(active.id), move.toColumnId, move.toIndex);
   }
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
+  function handleDragEnd({ active, over }: DragEndEvent) {
     setActiveId(null);
-    if (!over) return;
-    const activeId = String(active.id);
-    const overId = String(over.id);
-
-    const to = containerIdOf(overId);
-    if (!to) return;
-    moveCard(activeId, to, indexInColumn(to, overId));
+    const move = finalMove(columns, String(active.id), over ? String(over.id) : null);
+    if (move) moveCard(String(active.id), move.toColumnId, move.toIndex);
   }
 
   const activeCard = activeId ? cards[activeId] : null;

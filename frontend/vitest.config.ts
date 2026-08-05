@@ -9,6 +9,12 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
     include: ["lib/**/*.test.{ts,tsx}", "components/**/*.test.{ts,tsx}"],
+    coverage: {
+      provider: "v8",
+      include: ["lib/**/*.ts", "components/**/*.tsx"],
+      reporter: ["text"],
+      thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },
+    },
   },
   resolve: {
     alias: {

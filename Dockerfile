@@ -1,3 +1,12 @@
+FROM node:26-bookworm-slim AS frontend
+
+WORKDIR /build
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+
 FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim AS base
 
 ENV UV_COMPILE_BYTECODE=1 \
@@ -8,7 +17,8 @@ WORKDIR /app
 COPY backend/pyproject.toml backend/uv.lock ./
 
 
-# Test image: dev dependencies included. Build with --target test.
+# Test image: dev dependencies included, no frontend needed.
+# Build with --target test.
 FROM base AS test
 RUN uv sync --locked
 COPY backend/ ./
@@ -18,6 +28,9 @@ CMD ["pytest"]
 FROM base AS runtime
 RUN uv sync --locked --no-dev
 COPY backend/ ./
+
+# The static export replaces the placeholder page.
+COPY --from=frontend /build/out/ ./static/
 
 RUN useradd --create-home app \
     && mkdir -p /data \
